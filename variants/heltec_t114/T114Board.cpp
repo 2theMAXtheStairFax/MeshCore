@@ -13,7 +13,7 @@ const PowerMgtConfig power_config = {
 };
 
 void T114Board::initiateShutdown(uint8_t reason) {
-#if ENV_INCLUDE_GPS == 1
+#if ENV_INCLUDE_GPS == 1 && GPS_EN != -1
   pinMode(GPS_EN, OUTPUT);
   digitalWrite(GPS_EN, LOW);
 #endif

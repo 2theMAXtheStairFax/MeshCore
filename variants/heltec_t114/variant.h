@@ -125,11 +125,18 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 // GPS
+//
+// Rev2 also breaks out GPS_EN/RESET/PPS/RX/TX (GPIO21/38/36/39/37) on the
+// JST-GH GNSS connector, but that needs a mating cable this board doesn't
+// have. Wired instead to the P1 header's UART1 pins (GPIO9/10), which are
+// accessible with jumper wires, for a Foxeer M10Q-180 module. That module
+// has no EN or hardware RESET line, so both are left unused (-1).
 
-#define GPS_EN                  (21)
-#define GPS_RESET               (38)
-#define PIN_GPS_RX              (39)  // This is for bits going TOWARDS the GPS
-#define PIN_GPS_TX              (37)  // This is for bits going TOWARDS the CPU
+#define GPS_EN                  (-1)
+#define GPS_RESET               (-1)
+#define PIN_GPS_RX              (10)  // This is for bits going TOWARDS the GPS (P1 header UART1_TX)
+#define PIN_GPS_TX              (9)   // This is for bits going TOWARDS the CPU (P1 header UART1_RX)
+#define GPS_BAUD_RATE            115200  // Foxeer M10Q-180 default NMEA baud
 
 ////////////////////////////////////////////////////////////////////////////////
 // TFT
