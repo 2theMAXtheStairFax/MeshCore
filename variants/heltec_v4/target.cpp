@@ -16,9 +16,12 @@ ESP32RTCClock fallback_clock;
 AutoDiscoverRTCClock rtc_clock(fallback_clock);
 
 #if ENV_INCLUDE_GPS
-  #include <helpers/sensors/MicroNMEALocationProvider.h>
-  MicroNMEALocationProvider nmea = MicroNMEALocationProvider(Serial1, &rtc_clock);
-  EnvironmentSensorManager sensors = EnvironmentSensorManager(nmea);
+  #include <helpers/sensors/MAVLinkLocationProvider.h>
+  // Position/time come from the flight controller's MAVLink telemetry stream
+  // (GLOBAL_POSITION_INT / GPS_RAW_INT / SYSTEM_TIME) on Serial1, not a local
+  // GPS module -- this board's only spare UART is wired to the FC.
+  MAVLinkLocationProvider fc_location = MAVLinkLocationProvider(Serial1, &rtc_clock);
+  EnvironmentSensorManager sensors = EnvironmentSensorManager(fc_location);
 #else
   EnvironmentSensorManager sensors;
 #endif
