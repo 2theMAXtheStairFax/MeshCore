@@ -51,6 +51,58 @@ class MicroNMEALocationProvider : public LocationProvider {
     unsigned long _last_time_sync = 0;
     static const unsigned long TIME_SYNC_INTERVAL = 1800000; // Re-sync every 30 minutes
 
+#ifdef GPS_UBLOX_M10
+    // u-blox M10 constellation select is UBX-CFG-VALSET (binary protocol),
+    // not a text sentence like MediaTek's PCAS04 - no NMEA equivalent, so
+    // this bypasses nmea.sendSentence() and writes the frame directly.
+    // Reapplied on every reset() since the module may not persist config
+    // across a power cycle depending on backup supercap/battery state.
+    void configureUbloxM10() {
+        static const uint32_t keys[] = {
+            0x1031001fUL, // CFG-SIGNAL_GPS_ENA
+            0x10310001UL, // CFG-SIGNAL_GPS_L1CA_ENA
+            0x10310021UL, // CFG-SIGNAL_GAL_ENA
+            0x10310007UL, // CFG-SIGNAL_GAL_E1_ENA
+            0x10310022UL, // CFG-SIGNAL_BDS_ENA
+            0x1031000dUL, // CFG-SIGNAL_BDS_B1_ENA
+            0x10310025UL, // CFG-SIGNAL_GLO_ENA
+            0x10310018UL, // CFG-SIGNAL_GLO_L1_ENA
+            0x10310024UL, // CFG-SIGNAL_QZSS_ENA
+            0x10310012UL, // CFG-SIGNAL_QZSS_L1CA_ENA
+        };
+        const int n = sizeof(keys) / sizeof(keys[0]);
+
+        uint8_t payload[4 + 5 * n];
+        payload[0] = 0x00;   // message version
+        payload[1] = 0x07;   // layers: RAM | BBR | Flash
+        payload[2] = 0x00;   // reserved
+        payload[3] = 0x00;   // reserved
+        int p = 4;
+        for (int i = 0; i < n; i++) {
+            payload[p++] = (uint8_t)(keys[i] >> 0);
+            payload[p++] = (uint8_t)(keys[i] >> 8);
+            payload[p++] = (uint8_t)(keys[i] >> 16);
+            payload[p++] = (uint8_t)(keys[i] >> 24);
+            payload[p++] = 0x01;   // enable
+        }
+
+        static const uint8_t sync[2] = { 0xB5, 0x62 };
+        uint8_t head[4] = { 0x06, 0x8A, (uint8_t)(p & 0xFF), (uint8_t)((p >> 8) & 0xFF) };
+
+        uint8_t ck_a = 0, ck_b = 0;
+        for (int i = 0; i < 4; i++) { ck_a = (uint8_t)(ck_a + head[i]); ck_b = (uint8_t)(ck_b + ck_a); }
+        for (int i = 0; i < p; i++) { ck_a = (uint8_t)(ck_a + payload[i]); ck_b = (uint8_t)(ck_b + ck_a); }
+
+        delay(250);
+        _gps_serial->write(sync, 2);
+        _gps_serial->write(head, 4);
+        _gps_serial->write(payload, p);
+        _gps_serial->write(ck_a);
+        _gps_serial->write(ck_b);
+        delay(250);
+    }
+#endif
+
 public :
     MicroNMEALocationProvider(Stream& ser, mesh::RTCClock* clock = NULL, int pin_reset = GPS_RESET, int pin_en = GPS_EN,RefCountedDigitalPin* peripher_power=NULL) :
     nmea(_nmeaBuffer, sizeof(_nmeaBuffer)), _clock(clock), _gps_serial(&ser), _peripher_power(peripher_power), _pin_reset(pin_reset), _pin_en(pin_en) {
@@ -91,6 +143,9 @@ public :
             delay(10);
             digitalWrite(_pin_reset, !GPS_RESET_ACTIVE);
         }
+#ifdef GPS_UBLOX_M10
+        configureUbloxM10();
+#endif
     }
 
     void stop() override {

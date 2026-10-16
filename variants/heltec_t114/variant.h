@@ -137,6 +137,7 @@
 #define PIN_GPS_RX              (10)  // This is for bits going TOWARDS the GPS (P1 header UART1_TX)
 #define PIN_GPS_TX              (9)   // This is for bits going TOWARDS the CPU (P1 header UART1_RX)
 #define GPS_BAUD_RATE            115200  // Foxeer M10Q-180 default NMEA baud
+#define GPS_UBLOX_M10                    // u-blox M10 chipset: force GPS+Galileo+BeiDou+GLONASS+QZSS concurrently via UBX-CFG-VALSET (see MicroNMEALocationProvider.h)
 
 ////////////////////////////////////////////////////////////////////////////////
 // TFT
